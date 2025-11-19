@@ -29,9 +29,9 @@ class Settings(BaseSettings):
     GEMINI_MAX_RETRIES: int = 3
     GEMINI_TIMEOUT: int = 60
 
-    # Authentication
-    CLERK_SECRET_KEY: str = "your_clerk_secret_here"
-    CLERK_PUBLISHABLE_KEY: str = "your_clerk_public_here"
+    # Authentication (optional - for Phase 4 frontend)
+    CLERK_SECRET_KEY: Optional[str] = None
+    CLERK_PUBLISHABLE_KEY: Optional[str] = None
 
     # Storage
     UPLOAD_DIR: str = "/mnt/uploads"
