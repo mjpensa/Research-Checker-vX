@@ -14,6 +14,7 @@ from core.redis import redis_client
 # Import routers
 from routes.pipelines import router as pipelines_router
 from routes.claims import router as claims_router
+from routes.reports import router as reports_router
 from routes.websocket import router as websocket_router
 
 # Configure logging
@@ -106,6 +107,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Register routers
 app.include_router(pipelines_router, prefix="/api/v1/pipelines", tags=["pipelines"])
 app.include_router(claims_router, prefix="/api/v1/claims", tags=["claims"])
+app.include_router(reports_router, prefix="/api/v1/reports", tags=["reports"])
 app.include_router(websocket_router, prefix="/ws", tags=["websocket"])
 
 if __name__ == "__main__":
