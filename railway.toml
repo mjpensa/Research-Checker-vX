@@ -1,0 +1,53 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "echo 'Use service-specific commands'"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[[services]]
+name = "postgres"
+source = "railway/postgres:14"
+
+[[services]]
+name = "redis"
+source = "railway/redis:7"
+
+[services.frontend]
+source = "./apps/frontend"
+buildCommand = "pnpm install && pnpm build"
+startCommand = "pnpm start"
+healthcheckPath = "/api/health"
+envs = ["NODE_ENV=production"]
+
+[services.api]
+source = "./apps/api"
+buildCommand = "pip install -r requirements.txt"
+startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT --workers 4"
+healthcheckPath = "/health"
+envs = ["PYTHON_VERSION=3.11"]
+
+[services.worker-extraction]
+source = "./apps/workers"
+buildCommand = "pip install -r requirements.txt"
+startCommand = "python worker_extraction.py"
+replicas = 2
+
+[services.worker-inference]
+source = "./apps/workers"
+buildCommand = "pip install -r requirements.txt"
+startCommand = "python worker_inference.py"
+replicas = 2
+
+[services.worker-reports]
+source = "./apps/workers"
+buildCommand = "pip install -r requirements.txt"
+startCommand = "python worker_reports.py"
+replicas = 1
+
+[volumes]
+uploads = { mount = "/mnt/uploads", size = "100GB" }
+exports = { mount = "/mnt/exports", size = "50GB" }
