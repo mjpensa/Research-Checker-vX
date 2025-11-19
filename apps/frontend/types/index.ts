@@ -87,3 +87,11 @@ export interface GraphEdge {
   type: DependencyType
   confidence: number
 }
+
+export interface GraphLink {
+  source: string
+  target: string
+  type: DependencyType
+  confidence: number
+  strength: string
+}
