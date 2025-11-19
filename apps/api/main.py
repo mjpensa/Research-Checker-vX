@@ -11,8 +11,10 @@ from core.config import settings
 from core.database import init_db, close_db
 from core.redis import redis_client
 
-# Import routers (will create these next)
-# from routes import pipelines, documents, claims, reports, websocket
+# Import routers
+from routes.pipelines import router as pipelines_router
+from routes.claims import router as claims_router
+from routes.websocket import router as websocket_router
 
 # Configure logging
 logging.basicConfig(
@@ -101,12 +103,10 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "Internal server error"}
     )
 
-# Register routers (will add these next)
-# app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
-# app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
-# app.include_router(claims.router, prefix="/api/v1/claims", tags=["claims"])
-# app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
-# app.include_router(websocket.router, prefix="/ws", tags=["websocket"])
+# Register routers
+app.include_router(pipelines_router, prefix="/api/v1/pipelines", tags=["pipelines"])
+app.include_router(claims_router, prefix="/api/v1/claims", tags=["claims"])
+app.include_router(websocket_router, prefix="/ws", tags=["websocket"])
 
 if __name__ == "__main__":
     import uvicorn
