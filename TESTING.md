@@ -1,250 +1,171 @@
-# Testing Guide - Phase 1
+# Testing Guide - Research Checker
 
-This guide covers testing the Phase 1 foundation before deploying to Railway.
+Comprehensive testing documentation for the Cross-LLM Research Synthesis System.
 
-## Local Testing (Optional)
+## Table of Contents
 
-If you want to test locally before deploying to Railway:
+- [Overview](#overview)
+- [Test Structure](#test-structure)
+- [Running Tests](#running-tests)
+- [Test Types](#test-types)
+- [Writing Tests](#writing-tests)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Coverage Reports](#coverage-reports)
+- [Troubleshooting](#troubleshooting)
 
-### Prerequisites
-- Python 3.11+
-- PostgreSQL 14+
-- Redis 7+
+## Overview
 
-### Setup
+The Research Checker project uses a comprehensive testing strategy covering:
 
-1. **Create local database**:
+- **Unit Tests**: Individual components and functions
+- **Integration Tests**: Multi-component workflows
+- **E2E Tests**: Full user journeys through the frontend
+- **API Tests**: All backend endpoints
+- **Worker Tests**: Background job processing
+
+### Test Stack
+
+- **Backend**: pytest, pytest-asyncio, pytest-cov
+- **Frontend**: Playwright
+- **Coverage**: Codecov, HTML reports
+- **CI/CD**: GitHub Actions
+
+## Test Structure
+
+```
+Research-Checker-vX/
+├── tests/
+│   ├── conftest.py                  # Shared pytest fixtures
+│   ├── unit/
+│   │   ├── api/
+│   │   │   ├── test_pipelines.py    # Pipeline API tests
+│   │   │   ├── test_claims.py       # Claims API tests
+│   │   │   └── test_reports.py      # Reports API tests
+│   │   └── workers/
+│   │       └── test_extraction_worker.py
+│   └── integration/
+│       └── workflows/
+│           └── test_full_pipeline.py
+│
+├── apps/frontend/
+│   ├── e2e/
+│   │   ├── dashboard.spec.ts
+│   │   └── pipeline-details.spec.ts
+│   └── playwright.config.ts
+│
+├── pytest.ini
+└── .github/workflows/test.yml
+```
+
+## Running Tests
+
+### Backend Tests
+
 ```bash
-createdb llm_synthesis
+# All tests
+pytest
+
+# With coverage
+pytest --cov --cov-report=html
+
+# Specific tests
+pytest tests/unit/api/test_pipelines.py -v
+pytest -k "pipeline" -v
+pytest -m unit
+
+# Watch mode
+pytest-watch
 ```
 
-2. **Start Redis**:
+### Frontend E2E Tests
+
 ```bash
-redis-server
+cd apps/frontend
+
+# Install
+pnpm install
+pnpm exec playwright install
+
+# Run tests
+pnpm exec playwright test
+
+# With UI
+pnpm exec playwright test --ui
+
+# Debug
+pnpm exec playwright test --debug
 ```
 
-3. **Set up environment**:
+## CI/CD Pipeline
+
+GitHub Actions runs automatically on push/PR:
+
+1. Backend unit tests
+2. Integration tests  
+3. Frontend E2E tests
+4. Type checking
+5. Linting
+6. Security scan
+
+## Coverage
+
 ```bash
-cd apps/api
-cp .env.example .env
+# Generate coverage
+pytest --cov --cov-report=html
 
-# Edit .env and set:
-DATABASE_URL=postgresql://localhost/llm_synthesis
-REDIS_URL=redis://localhost:6379
-GEMINI_API_KEY=your_actual_gemini_key
-DEBUG=true
+# View report
+open htmlcov/index.html
 ```
 
-4. **Install dependencies**:
-```bash
-cd apps/api
-pip install -r requirements.txt
+**Targets:**
+- Backend: 80%+
+- API: 100% desired
+- Workers: 75%+
+
+## Writing Tests
+
+### Backend
+```python
+import pytest
+
+@pytest.mark.unit
+@pytest.mark.api
+def test_create_pipeline(test_client, sample_pipeline_data):
+    response = test_client.post("/api/v1/pipelines/", json=sample_pipeline_data)
+    assert response.status_code == 200
 ```
 
-5. **Initialize database**:
-```bash
-cd packages/database
-pip install -r requirements.txt
-python init_db.py
+### Frontend
+```typescript
+test('should create pipeline', async ({ page }) => {
+  await page.goto('/dashboard');
+  await page.getByRole('button', { name: /create/i }).click();
+  await expect(page.getByText(/pipeline/i)).toBeVisible();
+});
 ```
-
-### Run Tests
-
-#### Test API Startup
-```bash
-cd apps/api
-python test_api.py
-```
-
-Expected output:
-```
-✅ Configuration loaded
-✅ Database connection established
-✅ Redis connection established
-✅ Module imports successful
-```
-
-#### Test Gemini Integration
-```bash
-cd apps/api
-python test_gemini.py
-```
-
-Expected output:
-```
-✅ Response received
-✅ JSON response received
-✅ Cache is working
-✅ Token estimation working
-```
-
-#### Start API Server
-```bash
-cd apps/api
-python main.py
-
-# Or with uvicorn:
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
-#### Test Endpoints
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Root
-curl http://localhost:8000/
-
-# API Docs (if DEBUG=true)
-open http://localhost:8000/docs
-```
-
-## Railway Testing (Recommended)
-
-### Quick Start
-
-1. **Create Railway project** with:
-   - PostgreSQL service
-   - Redis service
-   - API service (from GitHub)
-
-2. **Set environment variables** in Railway:
-   ```
-   GEMINI_API_KEY=<your-key>
-   DEBUG=true
-   ENVIRONMENT=development
-   ```
-
-3. **Initialize database**:
-   ```bash
-   railway run python packages/database/init_db.py
-   ```
-
-4. **Test health endpoint**:
-   ```bash
-   curl https://your-app.railway.app/health
-   ```
-
-### Verification Checklist
-
-- [ ] Railway project created
-- [ ] PostgreSQL service running
-- [ ] Redis service running
-- [ ] API service deployed
-- [ ] Environment variables set
-- [ ] Database initialized
-- [ ] Health check returns 200 OK
-- [ ] Logs show no errors
 
 ## Troubleshooting
 
-### Database Connection Issues
-
-**Error**: `connection refused`
+### Database issues
 ```bash
-# Check DATABASE_URL
-echo $DATABASE_URL
-
-# Test connection
-railway run psql $DATABASE_URL
+docker ps | grep postgres
+dropdb research_checker_test
+createdb research_checker_test
 ```
 
-**Fix**: Ensure PostgreSQL service is running in Railway
-
-### Redis Connection Issues
-
-**Error**: `redis.exceptions.ConnectionError`
+### Redis issues
 ```bash
-# Check REDIS_URL
-echo $REDIS_URL
-
-# Test connection
-railway run redis-cli -u $REDIS_URL ping
+redis-cli ping  # Should return PONG
 ```
 
-**Fix**: Ensure Redis service is running in Railway
-
-### Gemini API Issues
-
-**Error**: `API key not valid`
+### Playwright issues
 ```bash
-# Check API key is set
-railway variables | grep GEMINI
+pnpm exec playwright install --force
+rm -rf .next
 ```
 
-**Fix**:
-1. Get key from https://aistudio.google.com/app/apikey
-2. Set in Railway: `railway variables --set GEMINI_API_KEY=<your-key>`
+For more help, see full documentation in project wiki.
 
-### Import Errors
-
-**Error**: `ModuleNotFoundError`
-```bash
-# Check dependencies installed
-railway run pip list
-
-# Reinstall
-railway run pip install -r requirements.txt
-```
-
-## Performance Tests
-
-### Database Query Performance
-```python
-# Test in Railway shell
-railway run python
-
->>> import asyncio
->>> from core.database import get_db
->>> # Run test queries
-```
-
-### Redis Cache Performance
-```python
-# Test cache hit rates
-railway run python
-
->>> from core.redis import redis_client
->>> # Test cache operations
-```
-
-### Gemini API Response Time
-```bash
-# Run Gemini test
-railway run python apps/api/test_gemini.py
-```
-
-## Next Steps
-
-Once all tests pass:
-
-1. ✅ Phase 1 is complete
-2. → Proceed to Phase 2: Core Pipeline
-3. → Implement file upload system
-4. → Add background workers
-5. → Create API endpoints
-
-## Test Results Log
-
-Document your test results:
-
-```
-Date: _______________
-Environment: Railway / Local
-Database: ✅ / ❌
-Redis: ✅ / ❌
-API: ✅ / ❌
-Gemini: ✅ / ❌
-Notes: _______________
-```
-
-## Automated Testing (Future)
-
-In Phase 5, we'll add:
-- Unit tests with pytest
-- Integration tests
-- API endpoint tests
-- Load testing
-- CI/CD pipeline
-
-For now, manual testing is sufficient for Phase 1.
+---
+**Version:** 1.0.0  
+**Last Updated:** December 19, 2024
